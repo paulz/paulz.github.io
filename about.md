@@ -3,9 +3,26 @@ layout: page
 title: About
 permalink: /about/
 ---
+This blog is about
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](http://jekyllrb.com/)
+#Test Driving Development on iOS.
 
-You can find the source code for the Jekyll new theme at: [github.com/jglovier/jekyll-new](https://github.com/jglovier/jekyll-new)
+## Why TDD is challanging on iOS projects?
 
-You can find the source code for Jekyll at [github.com/jekyll/jekyll](https://github.com/jekyll/jekyll)
+~~~ objc
+id becauseObjectiveC = [C language];
+~~~
+1. Technical
+  * Low level language
+  * High user expectations
+  * Lack of testing tools
+
+2. Human
+  * Young community of developers
+  * Short lived projects
+  * Small code base
+  
+---
+![close to user eyes ui](http://cdn.cultofmac.com/wp-content/uploads/2012/08/partlycloud2.jpg)
+
+As iOS products mature and get more complex tests become essential to agility of development.
