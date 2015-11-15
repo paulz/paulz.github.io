@@ -4,12 +4,11 @@ title:  "Testing code that catches exceptions"
 date:   2015-11-14 16:32:39
 categories: ios tdd unit objc
 ---
-In Objective-C exceptions are bad way to control flow of the program. Usually we want to return boolean result and set NSError instead of raising exception to indicate there was an error.
+In Objective-C throwing `NSException` is a bad way to control flow of the program. Usually we want to return a boolean result and set `NSError` to indicate there was an error.
 
-Sometimes we need to write a test that tests the code that raises exception.
-That code could be inside a framework or third party library we have no control. 
+Sometimes we need to write code that catches exceptions thrown from a framework or third party library we have no control.
 
-For example `seekToFileOffset` from `NSFileHandle` 
+Take for example `-[NSFileHandle seekToFileOffset:]`
 
 Apple Documentation for [seekToFileOffset](https://developer.apple.com/library/mac/documentation/Cocoa/Reference/Foundation/Classes/NSFileHandle_Class/#//apple_ref/occ/instm/NSFileHandle/seekToEndOfFile) has this warning:
 
@@ -18,7 +17,9 @@ Special Considerations
 Raises an exception if the message is sent to an NSFileHandle object representing a pipe or socket, if the file descriptor is closed, or if any other error occurs in seeking.
 {% endhighlight %}
 
-Here is an example of code that uses `seekToFileOffset` and have to catch exception
+So the code that uses seek to file offset has to be wrapped into `@try` block. And if we want to report the error we have to have a `@catch` block.
+
+Here is an example of code that uses `seekToFileOffset` with `@try/@catch`
 
 {% highlight objc %}
 - (BOOL)updateFileAtURL:(NSURL *)fileUrl error:(NSError **)error {
@@ -52,13 +53,14 @@ it(@"should report exception", ^{
 
 
 The challenge becomes running those tests in debugger.
-If you have Xcode exception breakpoint set in debugger then debugger going to stop on that test every time.
-If you do not have exceptions enabled that debugger it won't catch other unexpected exceptions during test run.
+If you have Xcode [Exception Breakpoint](https://developer.apple.com/library/ios/recipes/xcode_help-breakpoint_navigator/articles/adding_an_exception_breakpoint.html) set in debugger then debugger going to stop on that test every time.
+If you do not have exceptions enabled then debugger won't catch other unexpected exceptions during test run.
+
 I used to run tests two times once with exceptions disabled and if there is a failure in a test second time with enabled exceptions to debug the problem.
 One the second run I had to tell debugger to continue every time it stopped on expected exceptions until I get to the test failure.
 It would be nice if we can tell debugger to skip expected exceptions.
 
-Here is a little debugger command you can add to the Exception break point that will continue execution when special global variable `debuggerContinueOnExceptions` is set to TRUE:
+Here is a debugger command you can add to the Exception Breakpoint that will continue execution when special global variable `debuggerContinueOnExceptions` is set to TRUE:
 
 {% highlight python %}
 script lldb.process.Continue() if lldb.frame.EvaluateExpression("debuggerContinueOnExceptions").GetValueAsUnsigned() else None
@@ -88,3 +90,5 @@ afterEach(^{
 {% endhighlight %}
 
 With this change I can always have exceptions breakpoint enabled and run tests in debugger. When an unexpected is exception happens debugger stops and let me investigate the problem.
+
+Complete example project with shared exception breakpoint can be found here: [https://github.com/paulz/XcodeDebuggerContinueOnExceptions](https://github.com/paulz/XcodeDebuggerContinueOnExceptions)
