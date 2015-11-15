@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Testing code that raises exceptions"
+title:  "Testing code that catches exceptions"
 date:   2015-11-14 16:32:39
 categories: ios tdd unit objc
 ---
@@ -11,14 +11,14 @@ That code could be inside a framework or third party library we have no control.
 
 For example `seekToFileOffset` from `NSFileHandle` 
 
-Documentation has this warning:
+Apple Documentation for [seekToFileOffset](https://developer.apple.com/library/mac/documentation/Cocoa/Reference/Foundation/Classes/NSFileHandle_Class/#//apple_ref/occ/instm/NSFileHandle/seekToEndOfFile) has this warning:
 
-{% highlight objc %}
+{% highlight text %}
 Special Considerations
 Raises an exception if the message is sent to an NSFileHandle object representing a pipe or socket, if the file descriptor is closed, or if any other error occurs in seeking.
 {% endhighlight %}
 
-Here is an example of code that uses `seekToFileOffset`
+Here is an example of code that uses `seekToFileOffset` and have to catch exception
 
 {% highlight objc %}
 - (BOOL)updateFileAtURL:(NSURL *)fileUrl error:(NSError **)error {
@@ -36,6 +36,20 @@ Here is an example of code that uses `seekToFileOffset`
 }
 end
 {% endhighlight %}
+
+Here is a test that verifies the behavior when an exception is caught:
+{% highlight objc %}
+it(@"should report exception", ^{
+    NSError *error = nil;
+    [[theValue([updateFileAtURL:faultyFileUrl error:&error]) should] equal:theValue(NO)];
+    [[error.domain should] equal:@"FileUpdateErrorDomain"];
+
+    NSException *illegalSeek = error.userInfo[@"exception"];
+    [[illegalSeek.name should] equal:NSFileHandleOperationException];
+    [[illegalSeek.reason should] equal:@"*** -[NSConcreteFileHandle seekToFileOffset:]: Illegal seek"];
+});
+{% endhighlight %}
+
 
 The challenge becomes running those tests in debugger.
 If you have Xcode exception breakpoint set in debugger then debugger going to stop on that test every time.
@@ -71,13 +85,6 @@ afterEach(^{
     debuggerContinueOnExceptions = NO;
 });
 
-it(@"should report exception", ^{
-    NSError *error = nil;
-    [[theValue([updateFileAtURL:faultyFileUrl error:&error]) should] equal:theValue(NO)];
-    [[error.domain should] equal:@"FileUpdateErrorDomain"];
-
-    NSException *illegalSeek = error.userInfo[@"exception"];
-    [[illegalSeek.name should] equal:NSFileHandleOperationException];
-    [[illegalSeek.reason should] equal:@"*** -[NSConcreteFileHandle seekToFileOffset:]: Illegal seek"];
-});
 {% endhighlight %}
+
+With this change I can always have exceptions breakpoint enabled and run tests in debugger. When an unexpected is exception happens debugger stops and let me investigate the problem.
