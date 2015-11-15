@@ -1,25 +1,83 @@
 ---
 layout: post
-title:  "Welcome to Jekyll!"
+title:  "Testing code that raises exceptions"
 date:   2015-11-14 16:32:39
-categories: jekyll update
+categories: ios tdd unit objc
 ---
-You’ll find this post in your `_posts` directory. Go ahead and edit it and re-build the site to see your changes. You can rebuild the site in many different ways, but the most common way is to run `jekyll serve --watch`, which launches a web server and auto-regenerates your site when a file is updated.
+In Objective-C exceptions are bad way to control flow of the program. Usually we want to return boolean result and set NSError instead of raising exception to indicate there was an error.
 
-To add new posts, simply add a file in the `_posts` directory that follows the convention `YYYY-MM-DD-name-of-post.ext` and includes the necessary front matter. Take a look at the source for this post to get an idea about how it works.
+Sometimes we need to write a test that tests the code that raises exception.
+That code could be inside a framework or third party library we have no control. 
 
-Jekyll also offers powerful support for code snippets:
+For example `seekToFileOffset` from `NSFileHandle` 
 
-{% highlight ruby %}
-def print_hi(name)
-  puts "Hi, #{name}"
-end
-print_hi('Tom')
-#=> prints 'Hi, Tom' to STDOUT.
+Documentation has this warning:
+
+{% highlight objc %}
+Special Considerations
+Raises an exception if the message is sent to an NSFileHandle object representing a pipe or socket, if the file descriptor is closed, or if any other error occurs in seeking.
 {% endhighlight %}
 
-Check out the [Jekyll docs][jekyll] for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll’s GitHub repo][jekyll-gh]. If you have questions, you can ask them on [Jekyll’s dedicated Help repository][jekyll-help].
+Here is an example of code that uses `seekToFileOffset`
 
-[jekyll]:      http://jekyllrb.com
-[jekyll-gh]:   https://github.com/jekyll/jekyll
-[jekyll-help]: https://github.com/jekyll/jekyll-help
+{% highlight objc %}
+- (BOOL)updateFileAtURL:(NSURL *)fileUrl error:(NSError **)error {
+  NSFileHandle *file = [NSFileHandle fileHandleForUpdatingURL:fileUrl error:error];
+  @try {
+    [file seekToFileOffset:123];        // Debugger stops at this line throwing an expected exception in test
+  } @catch (NSException *exception) {
+    *error = [NSError errorWithDomain:@"FileUpdateErrorDomain"
+                                 code:-1
+                             userInfo:@{@"exception" : exception}];
+    return FALSE;
+  }
+  [file writeData:[self dataToWrite]];
+  return TRUE;
+}
+end
+{% endhighlight %}
+
+The challenge becomes running those tests in debugger.
+If you have Xcode exception breakpoint set in debugger then debugger going to stop on that test every time.
+If you do not have exceptions enabled that debugger it won't catch other unexpected exceptions during test run.
+I used to run tests two times once with exceptions disabled and if there is a failure in a test second time with enabled exceptions to debug the problem.
+One the second run I had to tell debugger to continue every time it stopped on expected exceptions until I get to the test failure.
+It would be nice if we can tell debugger to skip expected exceptions.
+
+Here is a little debugger command you can add to the Exception break point that will continue execution when special global variable `debuggerContinueOnExceptions` is set to TRUE:
+
+{% highlight python %}
+script lldb.process.Continue() if lldb.frame.EvaluateExpression("debuggerContinueOnExceptions").GetValueAsUnsigned() else None
+{% endhighlight %}
+
+My `SpecHelper.h` defines it as 
+{% highlight objc %}
+extern BOOL debuggerContinueOnExceptions;
+{% endhighlight %}
+
+and sets it to NO within `SpecHelper.m`
+{% highlight objc %}
+BOOL debuggerContinueOnExceptions = NO;
+{% endhighlight %}
+
+Now any test that expects the exception can set it to YES before the test and restore it to NO after.
+
+{% highlight objc %}
+beforeEach(^{
+    debuggerContinueOnExceptions = YES;
+});
+
+afterEach(^{
+    debuggerContinueOnExceptions = NO;
+});
+
+it(@"should report exception", ^{
+    NSError *error = nil;
+    [[theValue([updateFileAtURL:faultyFileUrl error:&error]) should] equal:theValue(NO)];
+    [[error.domain should] equal:@"FileUpdateErrorDomain"];
+
+    NSException *illegalSeek = error.userInfo[@"exception"];
+    [[illegalSeek.name should] equal:NSFileHandleOperationException];
+    [[illegalSeek.reason should] equal:@"*** -[NSConcreteFileHandle seekToFileOffset:]: Illegal seek"];
+});
+{% endhighlight %}
