@@ -14,13 +14,13 @@ id becauseObjectiveC = [C language];
 ~~~
 1. Technical
   * Low level language
-  * High user expectations
   * Lack of testing tools
+  * Small code base
 
 2. Human
+  * High user expectations
   * Young community of developers
   * Short lived projects
-  * Small code base
   
 ---
 ![close to user eyes ui](http://cdn.cultofmac.com/wp-content/uploads/2012/08/partlycloud2.jpg)
