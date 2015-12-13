@@ -52,6 +52,6 @@ UnitTests/SomeSpec.swift:108 has focused it block `fit`
 {% endhighlight %}
 
 Same message will be shown by Xcode when we try to commit from IDE:
-![Xcode error screenshot]({{ site.url }}/assets/xcode-pre-commit-hook-error-message.png)
+![Xcode error screenshot](/assets/xcode-pre-commit-hook-error-message.png)
 
 What hooks would you add for your Xcode project?
