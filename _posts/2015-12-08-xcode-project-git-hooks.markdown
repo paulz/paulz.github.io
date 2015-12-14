@@ -51,7 +51,13 @@ UnitTests/SomeSpec.swift:108 has focused it block `fit`
 ✗ One or more pre-commit hooks failed
 {% endhighlight %}
 
-Same message will be shown by Xcode when we try to commit from IDE:
-![Xcode error screenshot](/assets/xcode-pre-commit-hook-error-message.png)
 
+
+||  |
+|:-------|:-------:|
+|Same message will be shown by Xcode when we try to commit from IDE:| ![Xcode error screenshot](/assets/xcode-pre-commit-hook-error-message.png){:width="100%"}   |
+
+
+## Next
 What hooks would you add for your Xcode project?
+See [how to add pre-commit hook to prevent boiler plate comments](/xcode/source/code/2015/12/12/remove-default-header-comment-in-xcode.html).
