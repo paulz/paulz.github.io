@@ -243,6 +243,7 @@ DEPENDENCIES
   guard-jekyll
   guard-jekyll-plus
   guard-livereload
+  jekyll-gist
 
 BUNDLED WITH
    1.13.7
