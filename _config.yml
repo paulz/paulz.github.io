@@ -9,3 +9,5 @@ github_username:  paulz
 disqusid: 4285406
 # Build settings
 markdown: kramdown
+timezone: 'America/Los_Angeles'
+future: true
