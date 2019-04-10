@@ -1,0 +1,83 @@
+---
+layout: post
+title:  "Swift 5 SIMD (Single Instruction, Multiple Data) Vectors improvements"
+date:   2019-04-10 10:00:00
+categories: swift xcode ios graphics swift5
+---
+
+### Swift 5 release improves SIMD vectors library
+
+
+[SIMD (Single Instruction, Multiple Data)](https://en.wikipedia.org/wiki/SIMD) allows to take advantage of hardware accelarated calculations for multiple application including vectors, equations, matrices, graphics.
+
+SIMD framwork is part of Apple Swift standard library since iOS 9. 
+
+With recent release of Swift 5 Apple shipped much improved API working with SIMD. See [Swift 5 Release Notes for Xcode 10.2](https://developer.apple.com/documentation/xcode_release_notes/xcode_10_2_release_notes/swift_5_release_notes_for_xcode_10_2)
+
+Now Swift 5 includes [proposed SIMD Vectors support as part of standard library](https://github.com/apple/swift-evolution/blob/master/proposals/0229-simd.md).
+
+Usual C interface to simd makes it harder to use for developer, now with Swift 5 we can take advantage of [generic `protocol SIMD`](https://developer.apple.com/documentation/swift/simd).
+
+## SIMD usage example
+
+I've recently migrated my open source project [Perspective Transform](https://github.com/paulz/PerspectiveTransform) to take advantage of Swift 5 SIMD improvements.
+
+Here is a block of code that takes advantage of matices multiplication and inverse. See [Perspective.swift](https://github.com/paulz/PerspectiveTransform/blob/cf20cb72987ca318168188243a5c433a33ebff55/Pod/Classes/Perspective.swift#L28) in the project:
+
+~~~swift
+
+    private func calculateBasisVectorsToPointsMap() -> Matrix3x3 {
+        let baseVectors = Matrix3x3(Array(vectors[Vector3.indexSlice]))
+        let solution = baseVectors.inverse * vectors[Vector3.lastIndex + 1]
+        let scale = Matrix3x3(diagonal: solution)
+        let basisToPoints = baseVectors * scale
+        return basisToPoints
+    }
+~~~
+
+Without SIMD to make a similar calculations we had to spell out linear equation solution:
+
+~~~swift
+        let a = -H*(x2a*x3a*y14 + x2a*x4a*y31 - x1a*x4a*y32 + x1a*x3a*y42)
+        let b = W*(x2a*x3a*y14 + x3a*x4a*y21 + x1a*x4a*y32 + x1a*x2a*y43)
+        let c = H*X*(x2a*x3a*y14 + x2a*x4a*y31 - x1a*x4a*y32 + x1a*x3a*y42) - H*W*x1a*(x4a*y32 - x3a*y42 + x2a*y43) - W*Y*(x2a*x3a*y14 + x3a*x4a*y21 + x1a*x4a*y32 + x1a*x2a*y43)
+
+        let d = H*(-x4a*y21*y3a + x2a*y1a*y43 - x1a*y2a*y43 - x3a*y1a*y4a + x3a*y2a*y4a)
+        let e = W*(x4a*y2a*y31 - x3a*y1a*y42 - x2a*y31*y4a + x1a*y3a*y42)
+        let f1 = (x4a*(Y*y2a*y31 + H*y1a*y32) - x3a*(H + Y)*y1a*y42 + H*x2a*y1a*y43 + x2a*Y*(y1a - y3a)*y4a + x1a*Y*y3a*(-y2a + y4a))
+        let f2 = x4a*y21*y3a - x2a*y1a*y43 + x3a*(y1a - y2a)*y4a + x1a*y2a*(-y3a + y4a)
+        let f = -(W*f1 - H*X*f2)
+
+        let g = H*(x3a*y21 - x4a*y21 + (-x1a + x2a)*y43)
+        let h = W*(-x2a*y31 + x4a*y31 + (x1a - x3a)*y42)
+
+        let temp = X * (-x3a*y21 + x4a*y21 + x1a*y43 - x2a*y43) + W * (-x3a*y2a + x4a*y2a + x2a*y3a - x4a*y3a - x2a*y4a + x3a*y4a)
+        var i = W * Y * (x2a*y31 - x4a*y31 - x1a*y42 + x3a*y42) + H * temp
+~~~
+see [QuadrilateralCalc.swift](https://github.com/paulz/PerspectiveTransform/blob/cf20cb72987ca318168188243a5c433a33ebff55/Example/Tests/QuadrilateralCalc.swift#L71) for comparison.
+
+## SIMD advantages
+Both solutions produce the same result, but SIMD code is much easier to understand, reason about and maintain. Plus with SIMD you can take advantage of hardware accelerated calculations as illustated here:
+
+![SIMD](https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/SIMD2.svg/440px-SIMD2.svg.png)
+
+You can calculate upto 64 values at once for single operation, see [SIMD64<T>](https://developer.apple.com/documentation/swift/simd64)
+
+The above example solves the following matrix equation to find transformation:
+
+![](https://raw.githubusercontent.com/wiki/paulz/PerspectiveTransform/images/daum-equations/0.homography_definition.png)
+
+For more details on Perspective Transform Math see [Matrix Math explained](https://github.com/paulz/PerspectiveTransform/wiki/Matrix-Math)
+
+Basis vectors space allows us to add extra dimention for our homogeneous coordinates:
+
+![Base Vectors](https://raw.githubusercontent.com/wiki/paulz/PerspectiveTransform/images/BasisVectors.svg?sanitize=true)
+
+## SIMD calculations for animations
+
+As a result we can now calculate perspective transformation matrix that can be applied to simulate 3D perspective for 2D graphics:
+
+![](https://github.com/paulz/PerspectiveTransform/wiki/images/perspective-transform-animated.gif)
+
+Next application of SIMD I am excited about is using cryprographical and pseudo random calculations for high performance shuffling of vector and matices data. How SIMD can benefit your Swift project?
+
